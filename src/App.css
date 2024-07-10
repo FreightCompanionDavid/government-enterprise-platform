@@ -1,0 +1,50 @@
+.App {
+  text-align: left;
+  font-family: Arial, sans-serif;
+  color: #333;
+}
+
+.App-header {
+  background-color: #0f3460;
+  padding: 20px;
+  color: white;
+}
+
+.App-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  padding: 20px;
+}
+
+.component-container {
+  width: 45%;
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.hierarchical-structure ul {
+  list-style-type: none;
+  padding-left: 20px;
+}
+
+.theme-manager select,
+.theme-manager button {
+  margin: 10px 0;
+  padding: 5px;
+}
+
+.kubernetes-integration pre {
+  background-color: #f4f4f4;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .component-container {
+    width: 100%;
+  }
+}

@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <base href="https://websim.ai">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Futuristic TMS with 3D Global Logistics &amp; Weather Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background-color: #1a1a2e;
+      color: #e0e0e0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .tms-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background-color: #16213e;
+      padding: 20px;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .main-content {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-bar {
+      background-color: #0f3460;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .globe-container {
+      flex-grow: 1;
+      position: relative;
+    }
+
+    #globeCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .menu-item {
+      padding: 10px;
+      margin: 5px 0;
+      background-color: #1e3a5f;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .menu-item:hover {
+      background-color: #2a4d7f;
+    }
+
+    .tms-button {
+      background-color: #e94560;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .tms-button:hover {
+      background-color: #ff6b6b;
+    }
+
+    #info,
+    #shipmentInfo,
+    #weatherInfo {
+      position: absolute;
+      background: rgba(22, 33, 62, 0.8);
+      color: #e0e0e0;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    #info {
+      top: 10px;
+      left: 10px;
+    }
+
+    #shipmentInfo {
+      bottom: 10px;
+      left: 10px;
+    }
+
+    #weatherInfo {
+      bottom: 10px;
+      right: 10px;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(22, 33, 62, 0.9);
+      color: #e0e0e0;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+      width: 300px;
+    }
+
+    #overlay h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    #overlay input,
+    #overlay select {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 5px;
+      background: rgba(30, 58, 95, 0.7);
+      color: #e0e0e0;
+      border: 1px solid #4a69bd;
+      border-radius: 5px;
+    }
+
+    #overlay button {
+      width: 100%;
+      padding: 10px;
+      background: #e94560;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #overlay button:hover {
+      background: #ff6b6b;
+    }
+
+    #toggleOverlay,
+    #weatherToggle {
+      position: absolute;
+      background: #e94560;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+
+    #toggleOverlay:hover,
+    #weatherToggle:hover {
+      background: #ff6b6b;
+    }
+
+    #toggleOverlay {
+      top: 10px;
+      right: 10px;
+    }
+
+    #weatherToggle {
+      top: 10px;
+      left: 10px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+      background-color: #16213e;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #4a69bd;
+      width: 50%;
+      border-radius: 10px;
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #e0e0e0;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="tms-container">
+    <div class="sidebar" role="navigation" aria-label="Main Menu">
+      <h2>TMS Dashboard</h2>
+      <div class="menu-item" data-url="/api/shipments" tabindex="0" role="button" aria-label="View Shipments">Shipments
+      </div>
+      <div class="menu-item" data-url="/api/routes" tabindex="0" role="button" aria-label="View Routes">Routes</div>
+      <div class="menu-item" data-url="/api/vehicles" tabindex="0" role="button" aria-label="View Vehicles">Vehicles
+      </div>
+      <div class="menu-item" data-url="/api/analytics" tabindex="0" role="button" aria-label="View Analytics">Analytics
+      </div>
+      <div class="menu-item" data-url="/api/settings" tabindex="0" role="button" aria-label="View Settings">Settings
+      </div>
+    </div>
+    <div class="main-content">
+      <div class="top-bar">
+        <h1>Global Logistics Tracker</h1>
+        <button class="tms-button" id="generateReport" data-url="/api/report" aria-label="Generate Report">Generate
+          Report</button>
+      </div>
+      <div class="globe-container" role="region" aria-label="Interactive 3D Globe">
+        <canvas id="globeCanvas" aria-label="3D Globe visualization of global logistics and weather"></canvas>
+        <div id="info" aria-live="polite">FUTURISTIC 3D GLOBAL LOGISTICS & WEATHER TRACKER</div>
+        <div id="shipmentInfo" aria-live="polite">Shipment Info: Hover over a shipment to see details</div>
+        <div id="weatherInfo" aria-live="polite">Weather Info: Click on a location to see weather details</div>
+        <button id="toggleOverlay" aria-label="Open Control Panel">Open Control Panel</button>
+        <button id="weatherToggle" data-url="/api/weather/toggle" aria-label="Toggle Weather Globe">Toggle Weather
+          Globe</button>
+        <div id="overlay" role="dialog" aria-labelledby="overlayTitle">
+          <h2 id="overlayTitle">Control Panel</h2>
+          <select id="dataType" aria-label="Select data type">
+            <option value="shipment">Add Shipment</option>
+            <option value="weather">Add Weather Station</option>
+            <option value="employee">Add Employee GPS</option>
+          </select>
+          <input type="text" id="latitude" placeholder="Latitude" aria-label="Enter latitude">
+          <input type="text" id="longitude" placeholder="Longitude" aria-label="Enter longitude">
+          <input type="text" id="additionalInfo" placeholder="Additional Info"
+            aria-label="Enter additional information">
+          <button id="addData" data-url="/api/data/add" aria-label="Add Data">Add Data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="apiModal" class="modal" role="dialog" aria-labelledby="apiModalTitle">
+    <div class="modal-content">
+      <span class="close" aria-label="Close">&times;</span>
+      <h2 id="apiModalTitle">API Request</h2>
+      <pre id="apiResponse" aria-live="polite"></pre>
+    </div>
+  </div>
+
+  <script>
+    let scene, camera, renderer, controls, earth, atmosphereGlobe;
+    const shipments = [];
+    const weatherPoints = [];
+    const employees = [];
+    let isWeatherGlobeVisible = true;
+
+    function init() {
+      const container = document.querySelector('.globe-container');
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('globeCanvas') });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+
+      camera.position.z = 1.5;
+
+      const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
+      const earthTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+      const earthMaterial = new THREE.MeshPhongMaterial({
+        map: earthTexture,
+        specular: new THREE.Color('grey'),
+        shininess: 10
+      });
+      earth = new THREE.Mesh(earthGeometry, earthMaterial);
+      scene.add(earth);
+
+      // Create atmosphere globe
+      const atmosphereGeometry = new THREE.SphereGeometry(1.1, 64, 64);
+      const atmosphereMaterial = new THREE.ShaderMaterial({
+        transparent: true,
+        uniforms: {
+          time: { value: 0 }
+        },
+        vertexShader: `
+      varying vec3 vNormal;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+        fragmentShader: `
+      uniform float time;
+      varying vec3 vNormal;
+      void main() {
+        float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+        vec3 atmosphere = vec3(0.3, 0.6, 1.0) * intensity;
+        gl_FragColor = vec4(atmosphere, intensity * 0.3 + 0.2 * sin(time));
+      }
+    `,
+        side: THREE.BackSide
+      });
+      atmosphereGlobe = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+      scene.add(atmosphereGlobe);
+
+      const ambientLight = new THREE.AmbientLight(0x404040);
+      scene.add(ambientLight);
+
+      const pointLight = new THREE.PointLight(0x0088ff, 1);
+      pointLight.position.set(5, 3, 5);
+      scene.add(pointLight);
+
+      createShipments();
+      createWeatherPoints();
+
+      window.addEventListener('resize', onWindowResize, false);
+      renderer.domElement.addEventListener('click', onDocumentClick, false);
+
+      setupOverlayControls();
+      setupWeatherToggle();
+      setupAPIButtons();
+    }
+
+    function createShipments() {
+      for (let i = 0; i < 10; i++) {
+        addDataPoint('shipment');
+      }
+    }
+
+    function createWeatherPoints() {
+      for (let i = 0; i < 20; i++) {
+        addDataPoint('weather');
+      }
+    }
+
+    function addDataPoint(type, lat, lon, info) {
+      lat = lat || Math.random() * 180 - 90;
+      lon = lon || Math.random() * 360 - 180;
+
+      const geometry = new THREE.SphereGeometry(0.01, 16, 16);
+      let material, dataArray;
+
+      switch (type) {
+        case 'shipment':
+          material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+          dataArray = shipments;
+          info = info || `Shipment #${shipments.length + 1}: From City A to City B`;
+          break;
+        case 'weather':
+          material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+          dataArray = weatherPoints;
+          const weatherIcons = ['☀️', '🌧️', '❄️', '⛈️', '🌤️'];
+          info = info || `${weatherIcons[Math.floor(Math.random() * weatherIcons.length)]} Temp: ${Math.floor(Math.random() * 40)}°C, Humidity: ${Math.floor(Math.random() * 100)}%`;
+          break;
+        case 'employee':
+          material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+          dataArray = employees;
+          info = info || `Employee #${employees.length + 1}: On the move`;
+          break;
+      }
+
+      const mesh = new THREE.Mesh(geometry, material);
+      const pos = latLonToVector3(lat, lon, 1.01);
+      mesh.position.set(pos.x, pos.y, pos.z);
+      earth.add(mesh);
+      dataArray.push({ mesh, info, type });
+    }
+
+    function latLonToVector3(lat, lon, radius = 1) {
+      const phi = (90 - lat) * Math.PI / 180;
+      const theta = (lon + 180) * Math.PI / 180;
+      const x = -radius * Math.sin(phi) * Math.cos(theta);
+      const y = radius * Math.cos(phi);
+      const z = radius * Math.sin(phi) * Math.sin(theta);
+      return new THREE.Vector3(x, y, z);
+    }
+
+    function onWindowResize() {
+      const container = document.querySelector('.globe-container');
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    function onDocumentClick(event) {
+      const container = document.querySelector('.globe-container');
+      const rect = container.getBoundingClientRect();
+      const mouse = new THREE.Vector2();
+      mouse.x = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+
+      const allPoints = [...weatherPoints, ...shipments, ...employees];
+      const intersects = raycaster.intersectObjects(allPoints.map(p => p.mesh));
+
+      if (intersects.length > 0) {
+        const clickedPoint = allPoints.find(p => p.mesh === intersects[0].object);
+        updateInfoPanel(clickedPoint);
+      }
+    }
+
+    function updateInfoPanel(point) {
+      let infoElement;
+      switch (point.type) {
+        case 'shipment':
+          infoElement = document.getElementById('shipmentInfo');
+          break;
+        case 'weather':
+          infoElement = document.getElementById('weatherInfo');
+          break;
+        case 'employee':
+          infoElement = document.getElementById('shipmentInfo');
+          break;
+      }
+      infoElement.textContent = `${point.type.charAt(0).toUpperCase() + point.type.slice(1)} Info: ${point.info}`;
+    }
+
+    function setupOverlayControls() {
+      const overlay = document.getElementById('overlay');
+      const toggleButton = document.getElementById('toggleOverlay');
+      const addDataButton = document.getElementById('addData');
+
+      toggleButton.addEventListener('click', () => {
+        overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none';
+      });
+
+      addDataButton.addEventListener('click', () => {
+        const type = document.getElementById('dataType').value;
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lon = parseFloat(document.getElementById('longitude').value);
+        const info = document.getElementById('additionalInfo').value;
+
+        if (!isNaN(lat) && !isNaN(lon)) {
+          addDataPoint(type, lat, lon, info);
+          simulateAPIRequest(addDataButton.dataset.url, { type, lat, lon, info });
+        } else {
+          alert('Please enter valid latitude and longitude.');
+        }
+      });
+    }
+
+    function setupWeatherToggle() {
+      const weatherToggle = document.getElementById('weatherToggle');
+      weatherToggle.addEventListener('click', () => {
+        toggleWeatherGlobe();
+        simulateAPIRequest(weatherToggle.dataset.url, { visible: isWeatherGlobeVisible });
+      });
+    }
+
+    function toggleWeatherGlobe() {
+      isWeatherGlobeVisible = !isWeatherGlobeVisible;
+      const targetOpacity = isWeatherGlobeVisible ? 1 : 0;
+
+      new TWEEN.Tween(atmosphereGlobe.material)
+        .to({ opacity: targetOpacity }, 1000)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .start();
+    }
+
+    function setupAPIButtons() {
+      document.querySelectorAll('[data-url]').forEach(element => {
+        element.addEventListener('click', () => {
+          simulateAPIRequest(element.dataset.url);
+        });
+      });
+    }
+
+    function simulateAPIRequest(url, data = {}) {
+      console.log(`Simulating API request to: ${url}`);
+      console.log('Request data:', data);
+
+      // Simulate API response
+      const response = {
+        status: 'success',
+        data: {
+          message: `API request to ${url} successful`,
+          timestamp: new Date().toISOString(),
+          requestData: data
+        }
+      };
+
+      // Display API response in modal
+      const modal = document.getElementById('apiModal');
+      const apiResponse = document.getElementById('apiResponse');
+      apiResponse.textContent = JSON.stringify(response, null, 2);
+      modal.style.display = 'block';
+
+      // Close modal when clicking on <span> (x)
+      const span = document.getElementsByClassName('close')[0];
+      span.onclick = function () {
+        modal.style.display = 'none';
+      }
+
+      // Close modal when clicking outside of it
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          modal.style.display = 'none';
+        }
+      }
+    }
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+      TWEEN.update();
+      controls.update();
+
+      earth.rotation.y += 0.001;
+      atmosphereGlobe.rotation.y += 0.0005;
+
+      // Update atmosphere shader
+      if (atmosphereGlobe.material.uniforms) {
+        atmosphereGlobe.material.uniforms.time.value = time * 0.001;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    init();
+    animate();
+  </script>
+</body>
+
+</html>

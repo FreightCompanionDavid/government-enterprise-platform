@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <base href="https://websim.ai" />
+  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="description"
+    content="Government Enterprise Platform: A Secure, Intelligent, and Customizable Platform for Modern Government Operations" />
+  <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <title>Government Enterprise Platform</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <script type="module" src="index.js"></script>
+
+  <!-- Add this inside the sidebar div -->
+  <div class="menu-item" id="k8sPods">Kubernetes Pods</div>
+  <div class="menu-item" id="k8sDeployments">Kubernetes Deployments</div>
+
+  <!-- Add this after the existing overlay div -->
+  <div id="k8sOverlay" style="display: none;">
+    <h2>Kubernetes Operations</h2>
+    <div id="podList"></div>
+    <div id="podLogs" style="display: none;">
+      <h3>Pod Logs</h3>
+      <pre id="logContent"></pre>
+    </div>
+    <div id="createDeployment">
+      <h3>Create Deployment</h3>
+      <input type="text" id="deploymentName" placeholder="Deployment Name">
+      <input type="text" id="deploymentImage" placeholder="Container Image">
+      <input type="number" id="deploymentReplicas" placeholder="Number of Replicas">
+      <button id="createDeploymentBtn">Create Deployment</button>
+    </div>
+  </div>
+</body>
+
+</html>
